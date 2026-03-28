@@ -5,6 +5,7 @@ import { VOICE_PARSE_PROMPT } from "@/lib/prompts";
 import { completeClaude, parseJsonFromAssistant } from "@/lib/claude";
 import { ghanaNlpTts } from "@/lib/ghanaNlp";
 import { isDbConfigured, sql } from "@/lib/db";
+import { correctAsrText } from "@/lib/asrCorrections";
 
 const requestSchema = z.object({
   vehicleId: z.string().min(1),
@@ -87,7 +88,10 @@ export async function POST(request: Request) {
     }
 
     const { vehicleId, rawText, amount: manualAmount, route: manualRoute } = parsed.data;
-    const text = rawText.trim();
+    const { text, log: correctionLog } = correctAsrText(rawText.trim());
+    if (correctionLog) {
+      console.log("[ASR Corrections]", correctionLog);
+    }
 
     const hasManual =
       typeof manualAmount === "number" &&
