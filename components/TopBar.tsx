@@ -1,7 +1,11 @@
-export default function TopBar() {
+interface TopBarProps {
+  title?: string;
+}
+
+export default function TopBar({ title = "Today's trips" }: TopBarProps) {
   return (
     <div className="hidden md:flex bg-white border-b border-slate-100 px-6 py-4 justify-between items-center flex-shrink-0">
-      <span className="text-[15px] font-semibold text-slate-900">Today&apos;s trips</span>
+      <span className="text-[15px] font-semibold text-slate-900">{title}</span>
 
       <div className="flex items-center gap-3">
         <span className="bg-green-100 text-green-800 text-[11px] font-semibold px-2.5 py-1 rounded-full">
