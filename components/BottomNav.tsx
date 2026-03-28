@@ -1,14 +1,30 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 export default function BottomNav() {
+  const pathname = usePathname();
+  const logsActive = pathname === "/driver/logs";
+
   return (
     <div className="sticky bottom-0 z-20 md:hidden flex items-center justify-center pb-6 bg-transparent">
-      {/* Left pill — Trip logs (active) */}
-      <div className="bg-white border border-slate-100 shadow-md h-[50px] w-[110px] rounded-l-full -mr-3 flex items-center justify-center">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="#1E7A4A" aria-hidden="true">
+      {/* Left pill — Trip logs */}
+      <Link
+        href="/driver/logs"
+        aria-label="Open all trip logs"
+        className="bg-white border border-slate-100 shadow-md h-[50px] w-[110px] rounded-l-full -mr-3 flex items-center justify-center active:scale-[0.99] transition-transform"
+      >
+        <svg
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill={logsActive ? "#1E7A4A" : "#94A3B8"}
+          aria-hidden="true"
+        >
           <path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z" />
         </svg>
-      </div>
+      </Link>
 
       {/* Center FAB */}
       <Link

@@ -6,5 +6,11 @@ type Props = {
 
 export default async function VehicleDetailPage({ params }: Props) {
   const { vehicleId } = await params;
-  return <VehicleDetailView vehicleId={vehicleId} />;
+  return (
+    <main className="owner-page">
+      <div className="owner-shell">
+        <VehicleDetailView vehicleId={vehicleId} />
+      </div>
+    </main>
+  );
 }
