@@ -21,7 +21,7 @@ export default function EarningsBar({ summaries }: Props) {
           const barClass = summary.anomaly
             ? "bg-red-500"
             : isToday
-              ? "bg-brand"
+              ? "bg-[#1E7A4A]"
               : "bg-gray-300";
 
           return (

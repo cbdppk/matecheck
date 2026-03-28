@@ -2,6 +2,8 @@ import type { Trip } from "@/lib/contracts";
 
 type Props = {
   trips: Trip[];
+  /** Overrides the default "Trip list" heading (e.g. include date). */
+  listTitle?: string;
 };
 
 function confidenceClass(confidence: Trip["confidence"]) {
@@ -10,11 +12,11 @@ function confidenceClass(confidence: Trip["confidence"]) {
   return "bg-emerald-100 text-emerald-700";
 }
 
-export default function TripList({ trips }: Props) {
+export default function TripList({ trips, listTitle = "Trip list" }: Props) {
   if (trips.length === 0) {
     return (
       <div className="section-card text-sm text-gray-600">
-        No trips logged today
+        No trips logged for this day
       </div>
     );
   }
@@ -22,7 +24,7 @@ export default function TripList({ trips }: Props) {
   return (
     <div className="section-card p-0">
       <div className="border-b border-gray-200 px-4 py-3">
-        <h3 className="text-lg font-semibold text-ink">Trip list</h3>
+        <h3 className="text-lg font-semibold text-ink">{listTitle}</h3>
       </div>
 
       <div className="divide-y divide-gray-100">

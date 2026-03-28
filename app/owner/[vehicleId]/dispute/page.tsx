@@ -126,7 +126,7 @@ export default function DisputePage() {
 
   return (
     <>
-      <header className="rounded-b-[32px] bg-[#1E7A4A] px-5 pb-7 pt-5 shadow-[0_12px_40px_rgba(30,122,74,0.35)]">
+      <header className="rounded-b-[32px] bg-[#1E7A4A] px-5 pb-7 pt-5 shadow-[0_12px_40px_rgba(30,122,74,0.35)] md:px-8 lg:px-10">
         <Link
           href={`/owner/${vehicleId}`}
           className="inline-flex items-center gap-1 text-sm font-semibold text-white/90"
@@ -147,7 +147,8 @@ export default function DisputePage() {
         ) : null}
       </header>
 
-      <div className="px-4 pb-4 pt-6">
+      <div className="px-4 pb-8 pt-6 md:px-8 lg:px-10">
+        <div className="mx-auto max-w-4xl space-y-8">
         <OwnerSection
           title="Your claim"
           subtitle="Describe the mismatch in plain language. Optional: enter the amount the driver or records should show."
@@ -228,6 +229,7 @@ export default function DisputePage() {
             </div>
           </OwnerSection>
         ) : null}
+        </div>
       </div>
     </>
   );

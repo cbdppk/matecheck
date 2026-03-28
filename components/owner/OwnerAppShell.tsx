@@ -12,17 +12,47 @@ export default function OwnerAppShell({ children }: Props) {
   const pathname = usePathname();
   const [profileOpen, setProfileOpen] = useState(false);
 
-  const onOwnerRoutes = pathname.startsWith("/owner");
-  const fleetTabActive = onOwnerRoutes;
+  const fleetTabActive = pathname.startsWith("/owner");
+  const driverTabActive = pathname.startsWith("/driver");
+
+  const navLinkClass = (active: boolean) =>
+    active ? "text-[#1E7A4A]" : "text-slate-600 hover:text-[#1E7A4A]";
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-slate-900">
-      <div className="mx-auto min-h-screen w-full max-w-md shadow-[0_0_0_1px_rgba(15,23,42,0.06)]">
-        <div className="pb-28">{children}</div>
+      {/* Desktop top navigation */}
+      <header className="fixed left-0 right-0 top-0 z-30 hidden border-b border-slate-200 bg-white/95 backdrop-blur-sm md:block">
+        <div className="mx-auto flex h-14 max-w-7xl items-center justify-between gap-4 px-6 lg:px-8">
+          <Link href="/owner" className="text-lg font-bold tracking-tight text-[#1E7A4A]">
+            MateCheck <span className="font-semibold text-slate-500">Owner</span>
+          </Link>
+          <nav className="flex flex-wrap items-center justify-end gap-6 text-sm font-semibold">
+            <Link href="/owner" className={navLinkClass(fleetTabActive)} aria-current={fleetTabActive ? "page" : undefined}>
+              Fleet
+            </Link>
+            <Link href="/driver" className={navLinkClass(driverTabActive)} aria-current={driverTabActive ? "page" : undefined}>
+              Driver
+            </Link>
+            <Link href="/" className={navLinkClass(pathname === "/")}>
+              Home
+            </Link>
+            <button
+              type="button"
+              onClick={() => setProfileOpen(true)}
+              className="text-slate-600 hover:text-[#1E7A4A]"
+            >
+              Profile
+            </button>
+          </nav>
+        </div>
+      </header>
+
+      <div className="mx-auto min-h-screen w-full max-w-md shadow-[0_0_0_1px_rgba(15,23,42,0.06)] md:max-w-7xl md:shadow-none lg:px-6">
+        <div className="pb-28 md:pb-10 md:pt-14">{children}</div>
 
         <nav
           aria-label="Owner navigation"
-          className="fixed bottom-0 left-0 right-0 z-20 mx-auto flex h-16 max-w-md items-center justify-around border-t border-slate-100 bg-white px-6 shadow-[0_-4px_20px_rgba(0,0,0,0.06)]"
+          className="fixed bottom-0 left-0 right-0 z-20 flex h-16 items-center justify-around border-t border-slate-100 bg-white px-6 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] md:hidden"
           style={{ paddingBottom: "max(0.5rem, env(safe-area-inset-bottom))" }}
         >
           <Link
@@ -46,6 +76,13 @@ export default function OwnerAppShell({ children }: Props) {
             </span>
           </Link>
 
+          <Link href="/driver" className="flex flex-col items-center gap-1">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="#94A3B8" aria-hidden>
+              <path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z" />
+            </svg>
+            <span className="text-[10px] font-semibold text-slate-400">Driver</span>
+          </Link>
+
           <Link href="/" className="flex flex-col items-center gap-1">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="#94A3B8" aria-hidden>
               <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8h5z" />
@@ -67,15 +104,15 @@ export default function OwnerAppShell({ children }: Props) {
         </nav>
 
         {profileOpen ? (
-          <div className="fixed inset-0 z-50 flex flex-col justify-end">
+          <div className="fixed inset-0 z-50 flex flex-col justify-end md:items-center md:justify-center md:p-4">
             <button
               type="button"
               aria-label="Close profile"
               className="absolute inset-0 bg-black/40"
               onClick={() => setProfileOpen(false)}
             />
-            <div className="relative z-10 rounded-t-[28px] bg-white px-5 pb-10 pt-5">
-              <div className="mx-auto mb-5 h-1 w-10 rounded-full bg-slate-200" />
+            <div className="relative z-10 w-full max-w-md rounded-t-[28px] bg-white px-5 pb-10 pt-5 md:rounded-3xl md:shadow-xl">
+              <div className="mx-auto mb-5 h-1 w-10 rounded-full bg-slate-200 md:hidden" />
               <p className="mb-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400">
                 Owner console
               </p>
@@ -97,6 +134,14 @@ export default function OwnerAppShell({ children }: Props) {
                   className="flex w-full items-center justify-between rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-800"
                 >
                   Fleet dashboard
+                  <span className="text-slate-400">→</span>
+                </Link>
+                <Link
+                  href="/driver"
+                  onClick={() => setProfileOpen(false)}
+                  className="flex w-full items-center justify-between rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-800"
+                >
+                  Driver trip log
                   <span className="text-slate-400">→</span>
                 </Link>
               </div>

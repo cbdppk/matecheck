@@ -79,7 +79,7 @@ export default function OwnerFleet() {
 
   return (
     <>
-      <header className="rounded-b-[32px] bg-[#1E7A4A] px-5 pb-7 pt-5 shadow-[0_12px_40px_rgba(30,122,74,0.35)]">
+      <header className="rounded-b-[32px] bg-[#1E7A4A] px-5 pb-7 pt-5 shadow-[0_12px_40px_rgba(30,122,74,0.35)] md:px-8 lg:px-10">
         <div className="flex items-center justify-between">
           <Link href="/" className="text-sm font-bold tracking-wide text-white">
             MateCheck
@@ -124,7 +124,9 @@ export default function OwnerFleet() {
         </div>
       </header>
 
-      <div className="px-4 pt-6">
+      <div className="px-4 pt-6 md:px-8 lg:px-10">
+        <div className="mx-auto max-w-7xl lg:grid lg:grid-cols-[minmax(0,1fr)_280px] lg:items-start lg:gap-10">
+          <div className="min-w-0 space-y-5">
         {error ? (
           <p className="mb-4 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>
         ) : null}
@@ -154,7 +156,7 @@ export default function OwnerFleet() {
               const maxVal = Math.max(...chartBars.map((b) => b.total), 1);
               const todayLabel = todayAccraLabel();
               return (
-                <div className="flex h-40 items-end gap-1.5">
+                <div className="flex h-40 items-end gap-1.5 md:h-48">
                   {chartBars.map((bar) => {
                     const heightPct = Math.max(8, Math.round((bar.total / maxVal) * 100));
                     const isToday = bar.date === todayLabel;
@@ -163,7 +165,7 @@ export default function OwnerFleet() {
                         <span className="text-[9px] font-semibold text-slate-500 leading-none">
                           {isToday ? "" : ""}
                         </span>
-                        <div className="w-full flex flex-col justify-end" style={{ height: "120px" }}>
+                        <div className="flex h-[120px] w-full flex-col justify-end md:h-[144px]">
                           <div
                             title={`GHS ${bar.total.toFixed(0)}`}
                             className={`w-full rounded-t-xl transition-all ${isToday ? "bg-[#1E7A4A]" : "bg-slate-200"}`}
@@ -201,7 +203,7 @@ export default function OwnerFleet() {
           title="Fleet list"
           subtitle="Registered plates and today’s performance. Tap to open detail, AI summary, and disputes."
         >
-          <ul className="space-y-3" aria-label="Vehicles">
+          <ul className="grid gap-3 md:grid-cols-2 md:gap-4" aria-label="Vehicles">
             {items.map((row) => (
               <li key={row.vehicle.id}>
                 <VehicleCard vehicle={row.vehicle} summary={row.summary} />
@@ -209,16 +211,21 @@ export default function OwnerFleet() {
             ))}
           </ul>
         </OwnerSection>
+          </div>
 
-        <aside className="mt-8 hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:block">
+        <aside className="mt-8 hidden lg:sticky lg:top-24 lg:block lg:h-fit lg:rounded-2xl lg:border lg:border-slate-200 lg:bg-white lg:p-5 lg:shadow-sm">
           <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400">
-            Desktop · Today overview
+            Today overview
           </p>
           <p className="mt-2 text-3xl font-bold text-slate-900">GHS {totalRevenue.toFixed(2)}</p>
           <p className="mt-1 text-sm text-slate-600">
-            {totalTrips} trips · {items.length} vehicles · updates every few seconds
+            {totalTrips} trips · {items.length} vehicles · refreshes every few seconds
+          </p>
+          <p className="mt-4 text-xs leading-relaxed text-slate-400">
+            On smaller screens this summary is in the green header above.
           </p>
         </aside>
+        </div>
       </div>
     </>
   );
