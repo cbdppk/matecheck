@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import type { DailySummary, Trip, Vehicle } from "@/lib/contracts";
 import EarningsBar from "@/components/owner/EarningsBar";
+import OwnerSection from "@/components/owner/OwnerSection";
 import SummaryButton from "@/components/owner/SummaryButton";
 import TripList from "@/components/owner/TripList";
 
@@ -90,65 +91,88 @@ export default function VehicleDetailView({ vehicleId }: Props) {
 
   if (!vehicle || !todaySummary) {
     return (
-      <main className="screen-shell p-5">
-        <Link href="/owner" className="text-sm font-semibold text-brand">
-          ← Back to fleet
-        </Link>
-        {error ? (
-          <p className="mt-4 text-sm text-red-600">{error}</p>
-        ) : (
-          <p className="mt-4 text-sm text-gray-600">Loading vehicle…</p>
-        )}
-      </main>
+      <>
+        <header className="rounded-b-[32px] bg-[#1E7A4A] px-5 pb-6 pt-5 shadow-[0_12px_40px_rgba(30,122,74,0.35)]">
+          <Link
+            href="/owner"
+            className="inline-flex items-center gap-1 text-sm font-semibold text-white/90"
+          >
+            <span aria-hidden>←</span> Fleet list
+          </Link>
+          <h1 className="mt-4 text-xl font-bold text-white">Vehicle</h1>
+        </header>
+        <div className="px-4 pt-6">
+          {error ? (
+            <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>
+          ) : (
+            <p className="text-sm text-slate-600">Loading vehicle…</p>
+          )}
+        </div>
+      </>
     );
   }
 
   return (
-    <main className="screen-shell p-5">
-      <Link href="/owner" className="text-sm font-semibold text-brand">
-        ← Back to fleet
-      </Link>
+    <>
+      <header className="rounded-b-[32px] bg-[#1E7A4A] px-5 pb-7 pt-5 shadow-[0_12px_40px_rgba(30,122,74,0.35)]">
+        <Link
+          href="/owner"
+          className="inline-flex items-center gap-1 text-sm font-semibold text-white/90"
+        >
+          <span aria-hidden>←</span> Fleet list
+        </Link>
 
-      {error ? (
-        <p className="mt-4 rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-800">{error}</p>
-      ) : null}
-
-      <div className="mt-4 section-card">
-        <p className="text-xs uppercase tracking-[0.18em] text-gray-500">Vehicle</p>
-        <h1 className="mt-2 text-3xl font-bold text-ink">{vehicle.plate}</h1>
-        <p className="mt-2 inline-flex rounded-full bg-gray-100 px-3 py-1 text-sm font-medium text-gray-700">
-          {vehicle.route}
+        <p className="mt-5 text-[11px] font-semibold uppercase tracking-[0.2em] text-white/55">
+          Vehicle detail
         </p>
+        <h1 className="mt-1 text-3xl font-bold leading-tight text-white">{vehicle.plate}</h1>
+        <p className="mt-2 text-sm text-white/80">{vehicle.route}</p>
+        <p className="mt-1 text-xs text-white/60">{vehicle.ownerName}</p>
 
-        <div className="mt-5 grid grid-cols-2 gap-3">
-          <div className="rounded-2xl bg-gray-50 p-3">
-            <p className="text-xs uppercase tracking-[0.18em] text-gray-500">Today</p>
-            <p className="mt-2 text-xl font-semibold">GHS {todaySummary.total.toFixed(2)}</p>
+        <div className="mt-6 grid grid-cols-2 gap-3">
+          <div className="rounded-2xl bg-white/10 px-4 py-3 backdrop-blur-sm">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-white/55">Today · GHS</p>
+            <p className="mt-1 text-2xl font-bold text-white">{todaySummary.total.toFixed(2)}</p>
           </div>
-          <div className="rounded-2xl bg-gray-50 p-3">
-            <p className="text-xs uppercase tracking-[0.18em] text-gray-500">Trips</p>
-            <p className="mt-2 text-xl font-semibold">{todaySummary.tripCount}</p>
+          <div className="rounded-2xl bg-white/10 px-4 py-3 backdrop-blur-sm">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-white/55">Trips today</p>
+            <p className="mt-1 text-2xl font-bold text-white">{todaySummary.tripCount}</p>
           </div>
         </div>
-      </div>
 
-      <div className="mt-4">
-        <EarningsBar summaries={weekly} />
-      </div>
+        {todaySummary.anomaly ? (
+          <p className="mt-4 rounded-xl bg-red-500/30 px-3 py-2 text-center text-xs font-semibold text-white">
+            Flagged: earnings below recent average — review trips below.
+          </p>
+        ) : null}
+      </header>
 
-      <div className="mt-4">
-        <SummaryButton vehicleId={vehicleId} date={tripDate} />
-      </div>
+      <div className="space-y-6 px-4 pt-6">
+        {error ? (
+          <p className="rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-900">{error}</p>
+        ) : null}
 
-      <div className="mt-4">
-        <TripList trips={trips} />
-      </div>
+        <OwnerSection
+          title="Performance"
+          subtitle="Seven-day bars use Accra calendar days. Polling keeps numbers fresh."
+        >
+          <EarningsBar summaries={weekly} />
+        </OwnerSection>
 
-      <div className="mt-4">
-        <Link href={`/owner/${vehicleId}/dispute`} className="secondary-btn w-full">
-          Open Dispute Resolver
-        </Link>
+        <OwnerSection title="AI & disputes" subtitle="Neutral summaries and structured dispute review.">
+          <SummaryButton vehicleId={vehicleId} date={tripDate} />
+          <Link
+            href={`/owner/${vehicleId}/dispute`}
+            className="mt-3 flex min-h-[52px] w-full items-center justify-center rounded-2xl bg-[#1E7A4A] text-[15px] font-bold text-white transition active:bg-[#155C37]"
+          >
+            Open dispute resolver
+          </Link>
+        </OwnerSection>
+
+        <OwnerSection title="Trip log" subtitle="Chronological entries for the selected Accra date.">
+          <TripList trips={trips} listTitle={`Trips · ${tripDate}`} />
+        </OwnerSection>
       </div>
-    </main>
+    </>
   );
 }

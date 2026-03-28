@@ -14,6 +14,11 @@ const config: Config = {
           DEFAULT: "#0f9f68",
           dark: "#0a6c47"
         },
+        /* Aligns owner UI with driver shell (#1E7A4A) */
+        owner: {
+          green: "#1E7A4A",
+          dark: "#155C37",
+        },
         ink: "#111827",
         sand: "#f7f7f5"
       },
