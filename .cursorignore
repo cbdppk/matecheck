@@ -1,0 +1,25 @@
+# Generated / vendor — not useful for code search
+node_modules/
+.next/
+out/
+dist/
+build/
+coverage/
+.vercel/
+.turbo/
+
+# Secrets (example file stays visible)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Large duplicate reference pack (use docs/, prompts/, .agents/skills/)
+reference/original-guides/
+
+# Binary docs
+*.pdf
+
+# OS noise
+.DS_Store
