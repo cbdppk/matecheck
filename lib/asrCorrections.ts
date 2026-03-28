@@ -40,6 +40,11 @@ const CURRENCY_RULES: Rule[] = [
   { pattern: /\bseadis\b/gi,      replacement: "cedis" },
   { pattern: /\bsidis\b/gi,       replacement: "cedis" },
   { pattern: /\bceadis\b/gi,      replacement: "cedis" },
+  // "sedis" / "sedisi" / "sedise" / "sidisi" — GhanaNLP phonetic variants of "cedis"
+  { pattern: /\bsedise\b/gi,      replacement: "cedis" },
+  { pattern: /\bsedisi\b/gi,      replacement: "cedis" },
+  { pattern: /\bsedis\b/gi,       replacement: "cedis" },
+  { pattern: /\bsidisi\b/gi,      replacement: "cedis" },
   { pattern: /\bghana\s+cedis?\b/gi, replacement: "cedis" },
   { pattern: /\bghc\b/gi,         replacement: "cedis" },
   { pattern: /\bghs\b/gi,         replacement: "cedis" },
@@ -79,7 +84,9 @@ const NUMBER_RULES: Rule[] = [
   { pattern: /\bfaifu\b/gi,   replacement: "5" },
   { pattern: /\bfaiv\b/gi,    replacement: "5" },
   { pattern: /\bfayf\b/gi,    replacement: "5" },
+  { pattern: /\bfaei\b/gi,    replacement: "5" },  // "faei sedisi" → 5 cedis
   { pattern: new RegExp(`\\bfai\\b${CURRENCY_CTX}`, "gi"),  replacement: "5" },
+  { pattern: new RegExp(`\\bfae\\b${CURRENCY_CTX}`, "gi"),  replacement: "5" },  // "fae sidisi"
   // 6
   { pattern: /\bnsia\b/gi,    replacement: "6" },
   { pattern: /\bsikis\b/gi,   replacement: "6" },
@@ -105,6 +112,12 @@ const NUMBER_RULES: Rule[] = [
   // 10
   { pattern: /\bedu\b/gi,     replacement: "10" },
   { pattern: new RegExp(`\\bdu\\b${CURRENCY_CTX}`, "gi"),   replacement: "10" },
+  // 13 — GhanaNLP phonetic forms of English "thirteen"
+  // "ɛatim" / "atim" heard as "thirteen"; "ɛyɛtin" / "yɛtin" as another phonetic
+  { pattern: /\bɛatim\b/gi,   replacement: "13" },
+  { pattern: /\bɛyɛtin\b/gi,  replacement: "13" },
+  { pattern: new RegExp(`\\batim\\b${CURRENCY_CTX}`, "gi"),  replacement: "13" },
+  { pattern: new RegExp(`\\byɛtin\\b${CURRENCY_CTX}`, "gi"), replacement: "13" },
   // 20
   { pattern: /\baduonu\b/gi,  replacement: "20" },
   { pattern: /\btwenti\b/gi,  replacement: "20" },
@@ -154,12 +167,25 @@ const PLACE_RULES: Rule[] = [
   // Tanoso
   { pattern: /\bta\s+no\s+so\b/gi,                replacement: "Tanoso" },
   { pattern: /\btano\s+so\b/gi,                    replacement: "Tanoso" },
+  { pattern: /\btamaso\b/gi,                        replacement: "Tanoso" },
 
   // Ejisu
   { pattern: /\begyeso\b/gi,                       replacement: "Ejisu" },
   { pattern: /\bejeso\b/gi,                        replacement: "Ejisu" },
   { pattern: /\begyesu\b/gi,                       replacement: "Ejisu" },
   { pattern: /\begyezo\b/gi,                       replacement: "Ejisu" },
+
+  // Abuakwa (Kumasi)
+  { pattern: /\bebua\s+kwa\b/gi,                   replacement: "Abuakwa" },
+  { pattern: /\bɛbuakwa\b/gi,                      replacement: "Abuakwa" },
+  { pattern: /\bebuakwa\b/gi,                      replacement: "Abuakwa" },
+  { pattern: /\bbuakwa\b/gi,                       replacement: "Abuakwa" },
+
+  // Makro (wholesale market stop, Kumasi/Accra)
+  { pattern: /\bmmaakuu\b/gi,                      replacement: "Makro" },
+  { pattern: /\bmaakro\b/gi,                       replacement: "Makro" },
+  { pattern: /\bmaako\b/gi,                        replacement: "Makro" },
+  { pattern: /\bmaaku\b/gi,                        replacement: "Makro" },
 ];
 
 // ── Public API ────────────────────────────────────────────────────────────────
