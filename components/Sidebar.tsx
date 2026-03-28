@@ -5,7 +5,7 @@ interface SidebarProps {
   vehicle: Vehicle;
   summary: DailySummary;
   /** Which page is currently active in the sidebar nav */
-  activePage?: "trips" | "log";
+  activePage?: "trips";
 }
 
 export default function Sidebar({ vehicle, summary, activePage = "trips" }: SidebarProps) {
@@ -69,15 +69,11 @@ export default function Sidebar({ vehicle, summary, activePage = "trips" }: Side
         </div>
       </nav>
 
-      {/* CTA — Log new trip (active styling when on log page) */}
+      {/* CTA — Log new trip */}
       <div className="mx-3 mb-5 mt-auto">
         <Link
-          href="/log-trip"
-          className={`w-full rounded-xl px-4 py-3 flex items-center justify-center gap-2 min-h-[48px] ${
-            activePage === "log"
-              ? "bg-white/15"
-              : "bg-[#155C37] shadow-[0_4px_14px_rgba(21,92,55,0.5)] border border-white/10"
-          }`}
+          href="/driver"
+          className="w-full rounded-xl px-4 py-3 flex items-center justify-center gap-2 min-h-[48px] bg-[#155C37] shadow-[0_4px_14px_rgba(21,92,55,0.5)] border border-white/10"
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="white" aria-hidden="true">
             <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
