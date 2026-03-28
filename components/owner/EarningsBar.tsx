@@ -14,7 +14,7 @@ export default function EarningsBar({ summaries }: Props) {
         <p className="text-xs uppercase tracking-[0.18em] text-gray-500">GHS trend</p>
       </div>
 
-      <div className="flex h-40 items-end gap-2">
+      <div className="flex h-40 items-end gap-2 md:h-52">
         {summaries.map((summary, index) => {
           const height = Math.max(12, Math.round((summary.total / max) * 100));
           const isToday = index === summaries.length - 1;

@@ -90,7 +90,7 @@ export default function VehicleDetailView({ vehicleId }: Props) {
 
   if (!vehicle || !todaySummary) {
     return (
-      <main className="screen-shell p-5">
+      <>
         <Link href="/owner" className="text-sm font-semibold text-brand">
           ← Back to fleet
         </Link>
@@ -99,56 +99,75 @@ export default function VehicleDetailView({ vehicleId }: Props) {
         ) : (
           <p className="mt-4 text-sm text-gray-600">Loading vehicle…</p>
         )}
-      </main>
+      </>
     );
   }
 
   return (
-    <main className="screen-shell p-5">
-      <Link href="/owner" className="text-sm font-semibold text-brand">
-        ← Back to fleet
-      </Link>
+    <>
+      <div className="flex items-center justify-between gap-3">
+        <Link href="/owner" className="text-sm font-semibold text-brand">
+          ← Back to fleet
+        </Link>
+      </div>
 
       {error ? (
         <p className="mt-4 rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-800">{error}</p>
       ) : null}
 
-      <div className="mt-4 section-card">
-        <p className="text-xs uppercase tracking-[0.18em] text-gray-500">Vehicle</p>
-        <h1 className="mt-2 text-3xl font-bold text-ink">{vehicle.plate}</h1>
-        <p className="mt-2 inline-flex rounded-full bg-gray-100 px-3 py-1 text-sm font-medium text-gray-700">
-          {vehicle.route}
-        </p>
+      <div className="owner-dashboard mt-5">
+        <section className="owner-main-column space-y-4">
+          <div className="section-card">
+            <p className="text-xs uppercase tracking-[0.18em] text-gray-500">Vehicle</p>
+            <h1 className="mt-2 text-3xl font-bold text-ink md:text-4xl">{vehicle.plate}</h1>
+            <p className="mt-2 inline-flex rounded-full bg-gray-100 px-3 py-1 text-sm font-medium text-gray-700">
+              {vehicle.route}
+            </p>
 
-        <div className="mt-5 grid grid-cols-2 gap-3">
-          <div className="rounded-2xl bg-gray-50 p-3">
-            <p className="text-xs uppercase tracking-[0.18em] text-gray-500">Today</p>
-            <p className="mt-2 text-xl font-semibold">GHS {todaySummary.total.toFixed(2)}</p>
+            {todaySummary.anomaly ? (
+              <div className="mt-3">
+                <span className="pill bg-red-100 text-red-700">Low earnings</span>
+              </div>
+            ) : (
+              <div className="mt-3">
+                <span className="pill bg-emerald-100 text-emerald-700">On track</span>
+              </div>
+            )}
+
+            <div className="mt-5 grid grid-cols-2 gap-3 md:mt-6">
+              <div className="rounded-2xl bg-gray-50 p-3 md:min-h-24 md:p-4">
+                <p className="text-xs uppercase tracking-[0.18em] text-gray-500">Today</p>
+                <p className="mt-2 text-xl font-semibold text-ink md:text-2xl">GHS {todaySummary.total.toFixed(2)}</p>
+              </div>
+              <div className="rounded-2xl bg-gray-50 p-3 md:min-h-24 md:p-4">
+                <p className="text-xs uppercase tracking-[0.18em] text-gray-500">Trips</p>
+                <p className="mt-2 text-xl font-semibold text-ink md:text-2xl">{todaySummary.tripCount}</p>
+              </div>
+            </div>
           </div>
-          <div className="rounded-2xl bg-gray-50 p-3">
-            <p className="text-xs uppercase tracking-[0.18em] text-gray-500">Trips</p>
-            <p className="mt-2 text-xl font-semibold">{todaySummary.tripCount}</p>
+
+          <EarningsBar summaries={weekly} />
+
+          <TripList trips={trips} />
+
+          <div className="md:hidden">
+            <SummaryButton vehicleId={vehicleId} date={tripDate} />
           </div>
-        </div>
-      </div>
 
-      <div className="mt-4">
-        <EarningsBar summaries={weekly} />
-      </div>
+          <div className="md:hidden">
+            <Link href={`/owner/${vehicleId}/dispute`} className="secondary-btn w-full">
+              Open Dispute Resolver
+            </Link>
+          </div>
+        </section>
 
-      <div className="mt-4">
-        <SummaryButton vehicleId={vehicleId} date={tripDate} />
+        <aside className="owner-desktop-rail space-y-4">
+          <SummaryButton vehicleId={vehicleId} date={tripDate} />
+          <Link href={`/owner/${vehicleId}/dispute`} className="secondary-btn w-full">
+            Open Dispute Resolver
+          </Link>
+        </aside>
       </div>
-
-      <div className="mt-4">
-        <TripList trips={trips} />
-      </div>
-
-      <div className="mt-4">
-        <Link href={`/owner/${vehicleId}/dispute`} className="secondary-btn w-full">
-          Open Dispute Resolver
-        </Link>
-      </div>
-    </main>
+    </>
   );
 }

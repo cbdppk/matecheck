@@ -1,32 +1,46 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 export default function BottomNav() {
-  return (
-    <div className="sticky bottom-0 z-20 md:hidden flex items-center justify-center pb-6 bg-transparent">
-      {/* Left pill — Trip logs (active) */}
-      <div className="bg-white border border-slate-100 shadow-md h-[50px] w-[110px] rounded-l-full -mr-3 flex items-center justify-center">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="#1E7A4A" aria-hidden="true">
-          <path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z" />
-        </svg>
-      </div>
+  const pathname = usePathname();
+  const logsActive = pathname === "/driver/logs";
+  const todayActive = pathname === "/driver";
 
-      {/* Center FAB */}
+  return (
+    <div className="sticky bottom-0 z-20 md:hidden flex items-center justify-around pb-6 pt-3 bg-white border-t border-slate-100 shadow-sm">
+
+      {/* Today — driver log screen */}
       <Link
-        href="/log-trip"
-        aria-label="Log new trip"
-        className="w-[60px] h-[60px] rounded-full bg-[#155C37] z-10 shadow-[0_5px_18px_rgba(21,92,55,0.45)] active:scale-95 transition-transform flex items-center justify-center flex-shrink-0"
+        href="/driver"
+        aria-label="Today's trips"
+        className="flex flex-col items-center gap-1 min-w-[60px] active:opacity-70 active:scale-[0.97] transition-transform"
       >
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="white" aria-hidden="true">
-          <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
+        <svg width="22" height="22" viewBox="0 0 24 24"
+          fill={todayActive ? "#1E7A4A" : "#94A3B8"} aria-hidden="true">
+          <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z" />
         </svg>
+        <span className={`text-[10px] font-semibold ${todayActive ? "text-[#1E7A4A]" : "text-slate-400"}`}>
+          Today
+        </span>
       </Link>
 
-      {/* Right pill — Profile (inactive) */}
-      <div className="bg-white border border-slate-100 shadow-md h-[50px] w-[110px] rounded-r-full -ml-3 flex items-center justify-center">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="#94A3B8" aria-hidden="true">
-          <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+      {/* Trip logs — /driver/logs */}
+      <Link
+        href="/driver/logs"
+        aria-label="All trip logs"
+        className="flex flex-col items-center gap-1 min-w-[60px] active:opacity-70 active:scale-[0.97] transition-transform"
+      >
+        <svg width="22" height="22" viewBox="0 0 24 24"
+          fill={logsActive ? "#1E7A4A" : "#94A3B8"} aria-hidden="true">
+          <path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z" />
         </svg>
-      </div>
+        <span className={`text-[10px] font-semibold ${logsActive ? "text-[#1E7A4A]" : "text-slate-400"}`}>
+          Logs
+        </span>
+      </Link>
+
     </div>
   );
 }

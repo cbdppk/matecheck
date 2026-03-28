@@ -163,10 +163,10 @@ export default function LogTripForm({ variant }: LogTripFormProps) {
         <SectionLabel>Route</SectionLabel>
         <SpeakFieldButton
           field="route"
-          onResult={(val) => {
+          value={route}
+          onValueChange={(val) => {
             setRoute(val);
             setError("");
-            // If amount already set, try auto-save
             if (amount && !Number.isNaN(Number(amount))) {
               void tryAutoSave(val, Number(amount));
             }
@@ -190,10 +190,10 @@ export default function LogTripForm({ variant }: LogTripFormProps) {
         <SectionLabel>Trip sales (GHS)</SectionLabel>
         <SpeakFieldButton
           field="amount"
-          onResult={(val) => {
+          value={amount}
+          onValueChange={(val) => {
             setAmount(val);
             setError("");
-            // If route already set, try auto-save
             if (route.trim()) {
               void tryAutoSave(route.trim(), Number(val));
             }
