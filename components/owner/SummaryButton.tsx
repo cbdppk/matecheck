@@ -44,7 +44,7 @@ export default function SummaryButton({ vehicleId, date }: Props) {
   return (
     <div className="section-card">
       <div className="flex flex-col gap-3">
-        <button type="button" onClick={handleClick} className="secondary-btn">
+        <button type="button" onClick={handleClick} className="secondary-btn w-full">
           Get AI Summary
         </button>
 

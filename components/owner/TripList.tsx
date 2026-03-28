@@ -27,19 +27,19 @@ export default function TripList({ trips }: Props) {
 
       <div className="divide-y divide-gray-100">
         {trips.map((trip) => (
-          <div key={trip.id} className="grid grid-cols-[1fr_auto] gap-3 px-4 py-3">
+          <div key={trip.id} className="grid grid-cols-[1fr_auto] gap-3 px-4 py-3 md:py-4">
             <div>
-              <p className="text-sm font-medium text-gray-900">
+              <p className="text-sm font-medium text-gray-900 md:text-base">
                 {new Date(trip.loggedAt).toLocaleTimeString([], {
                   hour: "2-digit",
                   minute: "2-digit",
                 })}
               </p>
-              <p className="mt-1 text-sm text-gray-600">{trip.route}</p>
+              <p className="mt-1 text-sm text-gray-600 md:text-base">{trip.route}</p>
             </div>
 
             <div className="text-right">
-              <p className="text-sm font-semibold text-gray-900">GHS {trip.amount.toFixed(2)}</p>
+              <p className="text-sm font-semibold text-gray-900 md:text-base">GHS {trip.amount.toFixed(2)}</p>
               <span className={`mt-1 inline-flex rounded-full px-2 py-1 text-xs font-medium ${confidenceClass(trip.confidence)}`}>
                 {trip.confidence}
               </span>
