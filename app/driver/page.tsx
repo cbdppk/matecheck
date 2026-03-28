@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import RouteSelector from "@/components/driver/RouteSelector";
 import SpeakFieldButton from "@/components/driver/SpeakFieldButton";
 import TripCard from "@/components/TripCard";
 import {
@@ -8,6 +10,7 @@ import {
   getTripsForVehicleDate,
   todayAccra,
 } from "@/lib/sampleData";
+import { getDefaultRoute } from "@/lib/knownRoutes";
 import type { Trip, VoiceLogResponse } from "@/lib/contracts";
 
 const vehicle = sampleVehicles[0]!;
@@ -34,39 +37,48 @@ const stepBg: Record<StepStatus, string> = {
   error:   "border-red-200 bg-red-50",
 };
 
-// ── modal state machine ───────────────────────────────────────────────────────
 type ModalState = "closed" | "confirm" | "processing" | "success" | "error";
 
 export default function DriverPage() {
-  // trip list — starts from sample data, grows when trips are saved
+  const router = useRouter();
+
+  // trip list
   const [trips, setTrips] = useState<Trip[]>(() =>
     getTripsForVehicleDate(vehicle.id, todayAccra),
   );
   const totalToday = trips.reduce((s, t) => s + t.amount, 0);
 
   // form values
-  const [route,  setRoute]  = useState("");
-  const [amount, setAmount] = useState("");
+  const [route,      setRoute]      = useState("");
+  const [amount,     setAmount]     = useState("");
   const [voiceError, setVoiceError] = useState("");
+  const [defaultRoute, setDefaultRouteState] = useState("");
 
   // modal
   const [modal,      setModal]      = useState<ModalState>("closed");
   const [modalError, setModalError] = useState("");
   const [steps,      setSteps]      = useState<Step[]>(INITIAL_STEPS);
 
-  // profile sheet
+  // sheets
   const [profileOpen, setProfileOpen] = useState(false);
+
+  // Load default route from localStorage on mount
+  useEffect(() => {
+    const dr = getDefaultRoute() || vehicle.route;
+    setDefaultRouteState(dr);
+  }, []);
 
   const parsedAmount = amount !== "" ? Number(amount) : NaN;
   const readyToLog   = route.trim().length > 0 && !Number.isNaN(parsedAmount) && parsedAmount > 0;
 
-  // auto-close success modal
+  // Auto-close success modal and clear form
   useEffect(() => {
     if (modal === "success") {
       const t = setTimeout(() => {
         setModal("closed");
         setRoute("");
         setAmount("");
+        setVoiceError("");
       }, 1800);
       return () => clearTimeout(t);
     }
@@ -121,34 +133,50 @@ export default function DriverPage() {
     }
   }
 
+  function handleLogout() {
+    router.push("/");
+  }
+
   // ── render ──────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-[#F0F4F8]">
 
       {/* ═══════════════════════════════════════════════════
-          HEADER — stats only, no mic buttons
+          HEADER — stats only
           ═══════════════════════════════════════════════════ */}
-      <div className="bg-[#1A6B41] px-5 pt-safe-5 pb-6">
+      <div className="bg-[#1A6B41] px-5 pb-6">
 
-        {/* Top row: brand + profile button */}
-        <div className="flex items-center justify-between mb-4 pt-5">
+        {/* Top row: brand + settings + profile */}
+        <div className="flex items-center justify-between pt-10 mb-4">
           <div>
             <p className="text-[13px] font-bold text-white/90 tracking-widest uppercase">MateCheck</p>
             <p className="text-[11px] text-white/50 mt-0.5">{vehicle.plate} · {vehicle.route}</p>
           </div>
-          <button
-            type="button"
-            onClick={() => setProfileOpen(true)}
-            aria-label="Open profile"
-            className="w-9 h-9 rounded-full bg-white/15 flex items-center justify-center active:bg-white/25 transition-colors"
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="white" aria-hidden="true">
-              <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
-            </svg>
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => router.push("/driver/settings")}
+              aria-label="Settings"
+              className="w-9 h-9 rounded-full bg-white/15 flex items-center justify-center active:bg-white/25 transition-colors"
+            >
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="white" aria-hidden="true">
+                <path d="M19.14 12.94c.04-.3.06-.61.06-.94s-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96a6.97 6.97 0 0 0-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84a.484.484 0 0 0-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.477.477 0 0 0-.59.22L2.74 8.87a.47.47 0 0 0 .12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.27.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.47.47 0 0 0-.12-.61l-2.01-1.58zM12 15.6a3.6 3.6 0 1 1 0-7.2 3.6 3.6 0 0 1 0 7.2z" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              onClick={() => setProfileOpen(true)}
+              aria-label="Open profile"
+              className="w-9 h-9 rounded-full bg-white/15 flex items-center justify-center active:bg-white/25 transition-colors"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="white" aria-hidden="true">
+                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+              </svg>
+            </button>
+          </div>
         </div>
 
-        {/* Stats row */}
+        {/* Stats */}
         <div className="flex items-end justify-between">
           <div>
             <p className="text-[10px] font-semibold tracking-widest uppercase text-white/50 mb-1">
@@ -158,8 +186,7 @@ export default function DriverPage() {
               GHS {totalToday.toFixed(2)}
             </p>
           </div>
-
-          <div className="flex gap-3 mb-1">
+          <div className="flex gap-4 mb-1">
             <div className="text-center">
               <p className="text-[28px] font-bold text-white leading-none">{trips.length}</p>
               <p className="text-[10px] text-white/50 mt-0.5">trips</p>
@@ -175,35 +202,33 @@ export default function DriverPage() {
       </div>
 
       {/* ═══════════════════════════════════════════════════
-          LOG A TRIP — two voice field columns
+          LOG A TRIP
           ═══════════════════════════════════════════════════ */}
       <div className="px-4 pt-5">
         <div className="bg-white rounded-[24px] shadow-sm border border-slate-100 overflow-hidden">
 
-          {/* Card header */}
           <div className="px-5 py-4 border-b border-slate-100">
             <p className="text-[15px] font-bold text-slate-900">Log a Trip</p>
-            <p className="text-[12px] text-slate-400 mt-0.5">Speak or type the route and sales amount</p>
+            <p className="text-[12px] text-slate-400 mt-0.5">Speak or select the route, then enter sales</p>
           </div>
 
-          {/* Two mic + input columns */}
           <div className="grid grid-cols-2 divide-x divide-slate-100">
 
-            {/* Route column */}
-            <div className="flex flex-col items-center px-4 pt-5 pb-5 gap-0">
+            {/* Route column — dropdown + mic */}
+            <div className="flex flex-col items-center px-4 pt-5 pb-5">
               <p className="text-[10px] font-bold tracking-widest uppercase text-slate-400 mb-3">
                 Route
               </p>
-              <SpeakFieldButton
-                field="route"
+              <RouteSelector
                 value={route}
-                onValueChange={(v) => { setRoute(v); setVoiceError(""); }}
-                onError={(msg) => setVoiceError(msg)}
+                onChange={(v) => { setRoute(v); setVoiceError(""); }}
+                defaultRoute={defaultRoute}
+                disabled={modal === "processing"}
               />
             </div>
 
-            {/* Amount column */}
-            <div className="flex flex-col items-center px-4 pt-5 pb-5 gap-0">
+            {/* Amount column — mic + number input */}
+            <div className="flex flex-col items-center px-4 pt-5 pb-5">
               <p className="text-[10px] font-bold tracking-widest uppercase text-slate-400 mb-3">
                 Sales (GHS)
               </p>
@@ -216,15 +241,15 @@ export default function DriverPage() {
             </div>
           </div>
 
-          {/* Error banner */}
+          {/* Voice error banner */}
           {voiceError ? (
-            <div className="mx-4 mb-4 rounded-xl bg-red-50 border border-red-100 px-4 py-2.5 flex items-center gap-2">
+            <div className="mx-4 mb-3 rounded-xl bg-red-50 border border-red-100 px-4 py-2.5 flex items-center gap-2">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="#EF4444" aria-hidden="true">
                 <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />
               </svg>
-              <p className="text-xs text-red-700">{voiceError}</p>
+              <p className="text-xs text-red-700 flex-1">{voiceError}</p>
               <button type="button" onClick={() => setVoiceError("")}
-                className="ml-auto text-red-400 hover:text-red-600">
+                className="text-red-400 active:text-red-600 ml-1">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
                 </svg>
@@ -242,7 +267,7 @@ export default function DriverPage() {
                 "w-full rounded-2xl py-4 text-[15px] font-bold transition-all min-h-[56px]",
                 "flex items-center justify-center gap-2",
                 readyToLog
-                  ? "bg-[#1A6B41] text-white shadow-[0_6px_20px_rgba(26,107,65,0.32)] active:bg-[#155C37] active:scale-[0.98]"
+                  ? "bg-[#1A6B41] text-white shadow-[0_6px_20px_rgba(26,107,65,0.28)] active:bg-[#155C37] active:scale-[0.98]"
                   : "bg-slate-100 text-slate-400 cursor-not-allowed",
               ].join(" ")}
             >
@@ -251,10 +276,9 @@ export default function DriverPage() {
               </svg>
               Log Trip
             </button>
-
             {!readyToLog ? (
               <p className="text-center text-[11px] text-slate-400 mt-2">
-                Fill both route and amount above to continue
+                Select a route and enter the sales amount to continue
               </p>
             ) : null}
           </div>
@@ -283,25 +307,22 @@ export default function DriverPage() {
           <div className="space-y-2">
             {[...trips]
               .sort((a, b) => new Date(b.loggedAt).getTime() - new Date(a.loggedAt).getTime())
-              .map((trip) => (
-                <TripCard key={trip.id} trip={trip} variant="mobile" />
-              ))}
+              .map((trip) => <TripCard key={trip.id} trip={trip} variant="mobile" />)}
           </div>
         )}
       </div>
 
       {/* ═══════════════════════════════════════════════════
-          BOTTOM NAV — Trips + Profile only (no Owner)
+          BOTTOM NAV
           ═══════════════════════════════════════════════════ */}
       <nav
         aria-label="Main navigation"
         className="fixed bottom-0 left-0 right-0 z-20 bg-white border-t border-slate-100 shadow-[0_-2px_16px_rgba(0,0,0,0.05)]"
       >
         <div className="flex items-center justify-around px-8 h-16">
-
           {/* Trips — active */}
-          <div className="flex flex-col items-center gap-1">
-            <div className="w-6 h-0.5 rounded-full bg-[#1A6B41] mb-0.5" />
+          <div className="flex flex-col items-center gap-0.5">
+            <div className="w-5 h-0.5 rounded-full bg-[#1A6B41] mb-0.5" />
             <svg width="22" height="22" viewBox="0 0 24 24" fill="#1A6B41" aria-hidden="true">
               <path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z" />
             </svg>
@@ -312,10 +333,10 @@ export default function DriverPage() {
           <button
             type="button"
             onClick={() => setProfileOpen(true)}
-            className="flex flex-col items-center gap-1 active:opacity-70"
+            className="flex flex-col items-center gap-0.5 active:opacity-70"
             aria-label="Profile"
           >
-            <div className="w-6 h-0.5 rounded-full bg-transparent mb-0.5" />
+            <div className="w-5 h-0.5 rounded-full bg-transparent mb-0.5" />
             <svg width="22" height="22" viewBox="0 0 24 24" fill="#94A3B8" aria-hidden="true">
               <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
             </svg>
@@ -329,81 +350,62 @@ export default function DriverPage() {
           ═══════════════════════════════════════════════════ */}
       {modal !== "closed" ? (
         <div className="fixed inset-0 z-50 flex items-end justify-center">
-          {/* Backdrop — only dismissible when not processing */}
           <div
             className="absolute inset-0 bg-black/40 backdrop-blur-[2px]"
             onClick={modal === "processing" ? undefined : () => setModal("closed")}
           />
-
-          {/* Sheet */}
           <div className="relative bg-white rounded-t-[28px] w-full max-w-md px-5 pt-5 pb-10 z-10">
             <div className="w-10 h-1 rounded-full bg-slate-200 mx-auto mb-5" />
 
-            {/* ── Confirm state ─────────────────────────────── */}
+            {/* Confirm */}
             {modal === "confirm" ? (
               <>
                 <p className="text-[17px] font-bold text-slate-900 mb-1">Confirm Trip</p>
-                <p className="text-sm text-slate-500 mb-5">
-                  Check the details before logging
-                </p>
+                <p className="text-sm text-slate-500 mb-5">Check the details before logging</p>
 
                 <div className="space-y-2.5 mb-6">
                   <div className="flex justify-between items-center rounded-2xl bg-slate-50 px-4 py-4">
                     <div className="flex items-center gap-2">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="#94A3B8" aria-hidden="true">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="#94A3B8" aria-hidden="true">
                         <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
                       </svg>
                       <span className="text-sm text-slate-500">Route</span>
                     </div>
-                    <span className="text-sm font-semibold text-slate-900 text-right max-w-[55%] truncate">
-                      {route}
-                    </span>
+                    <span className="text-sm font-semibold text-slate-900 text-right max-w-[55%] truncate">{route}</span>
                   </div>
 
                   <div className="flex justify-between items-center rounded-2xl bg-slate-50 px-4 py-4">
                     <div className="flex items-center gap-2">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="#94A3B8" aria-hidden="true">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="#94A3B8" aria-hidden="true">
                         <path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z" />
                       </svg>
                       <span className="text-sm text-slate-500">Trip Sales</span>
                     </div>
-                    <span className="text-[17px] font-bold text-[#1A6B41]">
-                      GHS {parsedAmount.toFixed(2)}
-                    </span>
+                    <span className="text-[17px] font-bold text-[#1A6B41]">GHS {parsedAmount.toFixed(2)}</span>
                   </div>
                 </div>
 
                 <div className="flex gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setModal("closed")}
-                    className="flex-1 rounded-2xl border border-slate-200 bg-white py-4 text-[14px] font-semibold text-slate-600 active:bg-slate-50"
-                  >
+                  <button type="button" onClick={() => setModal("closed")}
+                    className="flex-1 rounded-2xl border border-slate-200 bg-white py-4 text-[14px] font-semibold text-slate-600 active:bg-slate-50">
                     Cancel
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => void confirmAndSave()}
-                    className="flex-[2] rounded-2xl bg-[#1A6B41] py-4 text-[14px] font-bold text-white active:bg-[#155C37] shadow-[0_4px_14px_rgba(26,107,65,0.3)]"
-                  >
+                  <button type="button" onClick={() => void confirmAndSave()}
+                    className="flex-[2] rounded-2xl bg-[#1A6B41] py-4 text-[14px] font-bold text-white shadow-[0_4px_14px_rgba(26,107,65,0.3)] active:bg-[#155C37]">
                     Log It
                   </button>
                 </div>
               </>
             ) : null}
 
-            {/* ── Processing state ──────────────────────────── */}
+            {/* Processing */}
             {modal === "processing" ? (
               <>
                 <p className="text-[17px] font-bold text-slate-900 mb-1">Logging Trip…</p>
                 <p className="text-sm text-slate-400 mb-5">Please wait</p>
-
                 <div className="space-y-2">
                   {steps.map((step, i) => (
-                    <div
-                      key={i}
-                      className={`flex items-center gap-3 rounded-2xl border px-4 py-3.5 transition-colors ${stepBg[step.status]}`}
-                    >
+                    <div key={i} className={`flex items-center gap-3 rounded-2xl border px-4 py-3.5 transition-colors ${stepBg[step.status]}`}>
                       {step.status === "loading" ? (
                         <svg className="animate-spin flex-shrink-0" width="14" height="14"
                           viewBox="0 0 24 24" fill="none" stroke="#60A5FA" strokeWidth="2.5">
@@ -425,13 +427,12 @@ export default function DriverPage() {
               </>
             ) : null}
 
-            {/* ── Success state ─────────────────────────────── */}
+            {/* Success */}
             {modal === "success" ? (
               <div className="flex flex-col items-center py-6 gap-3">
                 <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center">
                   <svg width="32" height="32" viewBox="0 0 24 24" fill="none"
-                    stroke="#1A6B41" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
-                    aria-hidden="true">
+                    stroke="#1A6B41" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <polyline points="20 6 9 17 4 12" />
                   </svg>
                 </div>
@@ -442,7 +443,7 @@ export default function DriverPage() {
               </div>
             ) : null}
 
-            {/* ── Error state ───────────────────────────────── */}
+            {/* Error */}
             {modal === "error" ? (
               <>
                 <div className="w-14 h-14 rounded-full bg-red-100 flex items-center justify-center mb-4">
@@ -478,10 +479,6 @@ export default function DriverPage() {
           <div className="relative bg-white rounded-t-[28px] px-5 pt-5 pb-10 z-10">
             <div className="w-10 h-1 rounded-full bg-slate-200 mx-auto mb-5" />
 
-            <p className="text-[10px] font-bold tracking-widest uppercase text-slate-400 mb-4">
-              Driver Profile
-            </p>
-
             <div className="flex items-center gap-4 mb-6">
               <div className="w-14 h-14 rounded-full bg-[#1A6B41] flex items-center justify-center flex-shrink-0">
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="white" aria-hidden="true">
@@ -490,15 +487,11 @@ export default function DriverPage() {
               </div>
               <div>
                 <p className="text-lg font-bold text-slate-900">{vehicle.ownerName}</p>
-                <p className="text-sm text-slate-500">{vehicle.plate}</p>
+                <p className="text-sm text-slate-500">{vehicle.plate} · {vehicle.route}</p>
               </div>
             </div>
 
-            <div className="space-y-2.5">
-              <div className="flex justify-between items-center rounded-2xl bg-slate-50 px-4 py-3.5">
-                <span className="text-sm text-slate-500">Route</span>
-                <span className="text-sm font-semibold text-slate-900">{vehicle.route}</span>
-              </div>
+            <div className="space-y-2.5 mb-5">
               <div className="flex justify-between items-center rounded-2xl bg-slate-50 px-4 py-3.5">
                 <span className="text-sm text-slate-500">Today&apos;s total</span>
                 <span className="text-sm font-bold text-[#1A6B41]">GHS {totalToday.toFixed(2)}</span>
@@ -507,15 +500,35 @@ export default function DriverPage() {
                 <span className="text-sm text-slate-500">Trips today</span>
                 <span className="text-sm font-bold text-slate-900">{trips.length}</span>
               </div>
+              <div className="flex justify-between items-center rounded-2xl bg-slate-50 px-4 py-3.5">
+                <span className="text-sm text-slate-500">Default route</span>
+                <span className="text-xs font-semibold text-slate-700 max-w-[55%] text-right truncate">{defaultRoute || vehicle.route}</span>
+              </div>
             </div>
 
-            <button
-              type="button"
-              onClick={() => setProfileOpen(false)}
-              className="mt-5 w-full rounded-2xl bg-slate-100 py-3.5 text-sm font-semibold text-slate-700 active:bg-slate-200"
-            >
-              Close
-            </button>
+            <div className="space-y-2">
+              <button
+                type="button"
+                onClick={() => { setProfileOpen(false); router.push("/driver/settings"); }}
+                className="w-full flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3.5 active:bg-slate-50"
+              >
+                <span className="text-sm font-semibold text-slate-700">Settings</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="#94A3B8" aria-hidden="true">
+                  <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z" />
+                </svg>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="w-full flex items-center justify-center gap-2 rounded-2xl border border-red-200 bg-red-50 px-4 py-3.5 active:bg-red-100"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="#EF4444" aria-hidden="true">
+                  <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5-5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z" />
+                </svg>
+                <span className="text-sm font-semibold text-red-600">Log Out</span>
+              </button>
+            </div>
           </div>
         </div>
       ) : null}
