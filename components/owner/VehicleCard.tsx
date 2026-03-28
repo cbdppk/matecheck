@@ -8,13 +8,16 @@ type Props = {
 
 export default function VehicleCard({ vehicle, summary }: Props) {
   return (
-    <Link href={`/owner/${vehicle.id}`} className="section-card block">
+    <Link
+      href={`/owner/${vehicle.id}`}
+      className="section-card block transition hover:border-gray-300 hover:shadow-md"
+    >
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">
             Vehicle
           </p>
-          <h3 className="mt-1 text-2xl font-bold text-ink">{vehicle.plate}</h3>
+          <h3 className="mt-1 text-2xl font-bold text-ink md:text-[1.75rem]">{vehicle.plate}</h3>
         </div>
 
         {summary.anomaly ? (
@@ -28,14 +31,14 @@ export default function VehicleCard({ vehicle, summary }: Props) {
         {vehicle.route}
       </div>
 
-      <div className="mt-5 grid grid-cols-2 gap-3">
-        <div className="rounded-2xl bg-gray-50 p-3">
+      <div className="mt-5 grid grid-cols-2 gap-3 md:mt-6">
+        <div className="rounded-2xl bg-gray-50 p-3 md:min-h-24 md:p-4">
           <p className="text-xs uppercase tracking-[0.18em] text-gray-500">Today</p>
-          <p className="mt-2 text-xl font-semibold">GHS {summary.total.toFixed(2)}</p>
+          <p className="mt-2 text-xl font-semibold text-ink md:text-2xl">GHS {summary.total.toFixed(2)}</p>
         </div>
-        <div className="rounded-2xl bg-gray-50 p-3">
+        <div className="rounded-2xl bg-gray-50 p-3 md:min-h-24 md:p-4">
           <p className="text-xs uppercase tracking-[0.18em] text-gray-500">Trips</p>
-          <p className="mt-2 text-xl font-semibold">{summary.tripCount}</p>
+          <p className="mt-2 text-xl font-semibold text-ink md:text-2xl">{summary.tripCount}</p>
         </div>
       </div>
     </Link>
