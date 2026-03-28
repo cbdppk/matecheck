@@ -46,13 +46,6 @@ export default function OwnerAppShell({ children }: Props) {
             </span>
           </Link>
 
-          <Link href="/driver" className="flex flex-col items-center gap-1">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="#94A3B8" aria-hidden>
-              <path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z" />
-            </svg>
-            <span className="text-[10px] font-semibold text-slate-400">Driver</span>
-          </Link>
-
           <Link href="/" className="flex flex-col items-center gap-1">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="#94A3B8" aria-hidden>
               <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8h5z" />
@@ -104,14 +97,6 @@ export default function OwnerAppShell({ children }: Props) {
                   className="flex w-full items-center justify-between rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-800"
                 >
                   Fleet dashboard
-                  <span className="text-slate-400">→</span>
-                </Link>
-                <Link
-                  href="/driver"
-                  onClick={() => setProfileOpen(false)}
-                  className="flex w-full items-center justify-between rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-800"
-                >
-                  Driver trip log
                   <span className="text-slate-400">→</span>
                 </Link>
               </div>

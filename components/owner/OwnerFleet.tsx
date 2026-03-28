@@ -7,6 +7,7 @@ import OwnerSection from "@/components/owner/OwnerSection";
 import VehicleCard from "@/components/owner/VehicleCard";
 
 type FleetRow = { vehicle: Vehicle; summary: DailySummary };
+type ChartBar = { date: string; total: number };
 
 function todayAccraLabel(): string {
   return new Intl.DateTimeFormat("en-CA", {
@@ -18,12 +19,13 @@ function todayAccraLabel(): string {
 }
 
 export default function OwnerFleet() {
-  const [items, setItems] = useState<FleetRow[]>([]);
-  const [error, setError] = useState("");
-  const [dateLabel, setDateLabel] = useState(todayAccraLabel);
+  const [items,       setItems]       = useState<FleetRow[]>([]);
+  const [chartBars,   setChartBars]   = useState<ChartBar[]>([]);
+  const [error,       setError]       = useState("");
+  const [dateLabel,   setDateLabel]   = useState(todayAccraLabel);
   const anomalyCount = items.filter((row) => row.summary.anomaly).length;
   const onTrackCount = items.length - anomalyCount;
-  const totalTrips = items.reduce((acc, row) => acc + row.summary.tripCount, 0);
+  const totalTrips   = items.reduce((acc, row) => acc + row.summary.tripCount, 0);
   const totalRevenue = items.reduce((acc, row) => acc + row.summary.total, 0);
 
   const load = useCallback(async () => {
@@ -42,6 +44,28 @@ export default function OwnerFleet() {
 
       setItems(data);
       setError("");
+
+      // Load weekly summaries for all vehicles, aggregate by date
+      const weeklyResults = await Promise.all(
+        data.map((row) =>
+          fetch(`/api/weekly-summaries?vehicleId=${encodeURIComponent(row.vehicle.id)}`, {
+            cache: "no-store",
+          })
+            .then((r) => r.json())
+            .then((j) => (Array.isArray(j) ? (j as DailySummary[]) : []))
+            .catch(() => [] as DailySummary[]),
+        ),
+      );
+
+      // Aggregate totals by date across all vehicles
+      const byDate = new Map<string, number>();
+      weeklyResults.flat().forEach((s) => {
+        byDate.set(s.date, (byDate.get(s.date) ?? 0) + s.total);
+      });
+      const bars: ChartBar[] = Array.from(byDate.entries())
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([date, total]) => ({ date, total }));
+      setChartBars(bars);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not load fleet");
     }
@@ -110,6 +134,65 @@ export default function OwnerFleet() {
             No vehicles loaded yet. Run{" "}
             <code className="rounded bg-slate-100 px-1.5 py-0.5 text-xs">GET /api/init</code> if the
             database is empty.
+          </div>
+        ) : null}
+
+        {/* ── Fleet weekly revenue chart ─────────────────── */}
+        {chartBars.length > 0 ? (
+          <div className="mb-5 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <h3 className="text-[13px] font-bold text-slate-900">Fleet Revenue</h3>
+                <p className="text-[11px] text-slate-400 mt-0.5">All vehicles · last 7 days</p>
+              </div>
+              <span className="rounded-full bg-[#1E7A4A]/10 px-2.5 py-1 text-[11px] font-semibold text-[#1E7A4A]">
+                GHS trend
+              </span>
+            </div>
+
+            {(() => {
+              const maxVal = Math.max(...chartBars.map((b) => b.total), 1);
+              const todayLabel = todayAccraLabel();
+              return (
+                <div className="flex h-40 items-end gap-1.5">
+                  {chartBars.map((bar) => {
+                    const heightPct = Math.max(8, Math.round((bar.total / maxVal) * 100));
+                    const isToday = bar.date === todayLabel;
+                    return (
+                      <div key={bar.date} className="flex flex-1 flex-col items-center gap-1.5">
+                        <span className="text-[9px] font-semibold text-slate-500 leading-none">
+                          {isToday ? "" : ""}
+                        </span>
+                        <div className="w-full flex flex-col justify-end" style={{ height: "120px" }}>
+                          <div
+                            title={`GHS ${bar.total.toFixed(0)}`}
+                            className={`w-full rounded-t-xl transition-all ${isToday ? "bg-[#1E7A4A]" : "bg-slate-200"}`}
+                            style={{ height: `${heightPct}%` }}
+                          />
+                        </div>
+                        <span className={`text-[10px] font-medium leading-none ${isToday ? "text-[#1E7A4A] font-bold" : "text-slate-400"}`}>
+                          {bar.date.slice(8)}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+
+            <div className="mt-3 flex items-center gap-3 pt-3 border-t border-slate-100">
+              <div className="flex items-center gap-1.5">
+                <div className="w-2.5 h-2.5 rounded-full bg-[#1E7A4A]" />
+                <span className="text-[10px] text-slate-500">Today</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-2.5 h-2.5 rounded-full bg-slate-200" />
+                <span className="text-[10px] text-slate-500">Previous days</span>
+              </div>
+              <span className="ml-auto text-[11px] font-bold text-slate-900">
+                GHS {totalRevenue.toFixed(0)} today
+              </span>
+            </div>
           </div>
         ) : null}
 

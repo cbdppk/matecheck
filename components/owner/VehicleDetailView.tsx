@@ -88,27 +88,35 @@ export default function VehicleDetailView({ vehicleId }: Props) {
     return () => clearInterval(interval);
   }, [load]);
 
+  const BackButton = () => (
+    <Link
+      href="/owner"
+      className="inline-flex items-center gap-1.5 rounded-full bg-white border border-slate-200 px-3.5 py-2 text-[13px] font-semibold text-slate-700 shadow-sm active:bg-slate-50 transition-colors"
+    >
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="#64748B" aria-hidden="true">
+        <path d="M15.41 16.59L10.83 12l4.58-4.59L14 6l-6 6 6 6z" />
+      </svg>
+      Fleet
+    </Link>
+  );
+
   if (!vehicle || !todaySummary) {
     return (
-      <>
-        <Link href="/owner" className="text-sm font-semibold text-brand">
-          ← Back to fleet
-        </Link>
+      <div className="px-4 pt-4">
+        <BackButton />
         {error ? (
           <p className="mt-4 text-sm text-red-600">{error}</p>
         ) : (
           <p className="mt-4 text-sm text-gray-600">Loading vehicle…</p>
         )}
-      </>
+      </div>
     );
   }
 
   return (
     <>
       <div className="flex items-center justify-between gap-3">
-        <Link href="/owner" className="text-sm font-semibold text-brand">
-          ← Back to fleet
-        </Link>
+        <BackButton />
       </div>
 
       {error ? (
