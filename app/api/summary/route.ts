@@ -1,15 +1,21 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import type { DailySummary, SummaryResponse, Trip } from "@/lib/contracts";
-import { summarizeTrips } from "@/lib/sampleData";
+import { DAILY_SUMMARY_PROMPT } from "@/lib/prompts";
+import { getTripsForVehicleDate, summarizeTrips } from "@/lib/sampleData";
 import { isDbConfigured, sql } from "@/lib/db";
+import { completeClaude, parseJsonFromAssistant } from "@/lib/claude";
+import {
+  computeDailySummaryDb,
+  fetchTripsForVehicleOnDate,
+} from "@/lib/tripDb";
 
 const requestSchema = z.object({
   vehicleId: z.string().min(1),
   date: z.string().min(1),
 });
 
-function buildNotes(summary: DailySummary) {
+function fallbackNotes(summary: DailySummary) {
   if (summary.anomaly) {
     return {
       twi: "Ɛnnɛ sika a wɔaboa ano no so atew sen daadaa no. Hwɛ trip no mu bio na fa toto nnansa yi ho.",
@@ -23,23 +29,31 @@ function buildNotes(summary: DailySummary) {
   };
 }
 
-async function readTripsFromDb(vehicleId: string, date: string): Promise<Trip[]> {
-  const rows = await sql`
-    SELECT id, vehicle_id, amount, route, logged_at, raw_voice_text, confidence
-    FROM trips
-    WHERE vehicle_id = ${vehicleId} AND DATE(logged_at) = ${date}
-    ORDER BY logged_at DESC;
-  `;
+async function claudeDailyNotes(trips: Trip[]): Promise<{ twi: string; en: string } | null> {
+  if (!process.env.ANTHROPIC_API_KEY?.trim()) {
+    return null;
+  }
 
-  return rows.map((row) => ({
-    id: String(row.id),
-    vehicleId: String(row.vehicle_id),
-    amount: Number(row.amount),
-    route: String(row.route),
-    loggedAt: new Date(row.logged_at).toISOString(),
-    rawVoiceText: row.raw_voice_text ? String(row.raw_voice_text) : undefined,
-    confidence: row.confidence as Trip["confidence"],
+  const payload = trips.map((t) => ({
+    amount: t.amount,
+    route: t.route,
+    confidence: t.confidence,
+    time: t.loggedAt,
   }));
+
+  const user = `${DAILY_SUMMARY_PROMPT.trim()}\n\nTrip data (JSON):\n${JSON.stringify(payload)}`;
+
+  try {
+    const assistant = await completeClaude({ user, maxTokens: 512 });
+    const parsed = parseJsonFromAssistant<{ twi?: string; en?: string }>(assistant);
+    if (!parsed?.twi || !parsed?.en) {
+      return null;
+    }
+    return { twi: parsed.twi, en: parsed.en };
+  } catch (error) {
+    console.error("Claude daily summary failed", error);
+    return null;
+  }
 }
 
 export async function POST(request: Request) {
@@ -54,45 +68,53 @@ export async function POST(request: Request) {
     const { vehicleId, date } = parsed.data;
 
     let summary: DailySummary;
+    let trips: Trip[];
 
     if (isDbConfigured()) {
-      const trips = await readTripsFromDb(vehicleId, date);
-      const total = Number(trips.reduce((sum, trip) => sum + trip.amount, 0).toFixed(2));
-      const tripCount = trips.length;
-      const avgPerTrip = tripCount ? Number((total / tripCount).toFixed(2)) : 0;
-
-      const recentRows = await sql`
-        SELECT DATE(logged_at) AS date, SUM(amount) AS daily_total
-        FROM trips
-        WHERE vehicle_id = ${vehicleId} AND logged_at >= NOW() - INTERVAL '7 days'
-        GROUP BY DATE(logged_at);
-      `;
-
-      const recentTotals = recentRows.map((row) => Number(row.daily_total));
-      const recentAverage =
-        recentTotals.length > 0
-          ? recentTotals.reduce((sum, value) => sum + value, 0) / recentTotals.length
-          : 0;
-
-      summary = {
-        vehicleId,
-        date,
-        total,
-        tripCount,
-        avgPerTrip,
-        anomaly: total < recentAverage * 0.7,
-      };
+      summary = await computeDailySummaryDb(vehicleId, date);
+      trips = await fetchTripsForVehicleOnDate(vehicleId, date);
     } else {
       summary = summarizeTrips(vehicleId, date);
+      trips = getTripsForVehicleDate(vehicleId, date);
     }
 
-    const notes = buildNotes(summary);
+    const notes = (await claudeDailyNotes(trips)) ?? fallbackNotes(summary);
+
+    const summaryWithNote: DailySummary = {
+      ...summary,
+      aiNote: notes.en,
+    };
+
+    if (isDbConfigured()) {
+      try {
+        await sql`
+          INSERT INTO daily_summary (
+            vehicle_id, date, total, trip_count, avg_per_trip, ai_note, anomaly
+          )
+          VALUES (
+            ${summary.vehicleId},
+            ${summary.date},
+            ${summary.total},
+            ${summary.tripCount},
+            ${summary.avgPerTrip},
+            ${notes.en},
+            ${summary.anomaly}
+          )
+          ON CONFLICT (vehicle_id, date)
+          DO UPDATE SET
+            total = EXCLUDED.total,
+            trip_count = EXCLUDED.trip_count,
+            avg_per_trip = EXCLUDED.avg_per_trip,
+            ai_note = EXCLUDED.ai_note,
+            anomaly = EXCLUDED.anomaly;
+        `;
+      } catch (error) {
+        console.error("daily_summary upsert failed", error);
+      }
+    }
 
     const payload: SummaryResponse = {
-      summary: {
-        ...summary,
-        aiNote: notes.en,
-      },
+      summary: summaryWithNote,
       aiNoteTwi: notes.twi,
       aiNoteEn: notes.en,
     };

@@ -60,7 +60,8 @@ export async function seedDatabase() {
   }
 
   const existing = await sql`SELECT COUNT(*)::int AS count FROM vehicles;`;
-  const count = existing[0]?.count ?? 0;
+  const rows = existing as unknown as { count: number }[];
+  const count = rows[0]?.count ?? 0;
 
   if (count > 0) {
     return { seeded: false, reason: "vehicles already exist" };

@@ -46,6 +46,15 @@ export default function DriverPage() {
         throw new Error(data.error || "Could not log trip");
       }
 
+      if (data.confirmationTwi) {
+        try {
+          const audio = new Audio(data.confirmationTwi);
+          void audio.play();
+        } catch {
+          /* ignore playback errors (autoplay policies, codec) */
+        }
+      }
+
       setSuccess(data);
       setRawText("");
       setAmount("");

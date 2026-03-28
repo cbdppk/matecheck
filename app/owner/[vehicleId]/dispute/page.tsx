@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 
 type DisputeApiResponse = {
@@ -25,14 +25,63 @@ function verdictLabel(verdict: DisputeApiResponse["verdict"]) {
   return "Gap — unexplained";
 }
 
+function todayAccra(): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Africa/Accra",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
+
 export default function DisputePage() {
   const params = useParams<{ vehicleId: string }>();
   const vehicleId = params?.vehicleId ?? "";
+  const [plate, setPlate] = useState("");
+  const [loggedPreview, setLoggedPreview] = useState<number | null>(null);
   const [ownerClaim, setOwnerClaim] = useState("");
   const [claimedAmount, setClaimedAmount] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<DisputeApiResponse | null>(null);
   const [error, setError] = useState("");
+
+  const loadContext = useCallback(async () => {
+    if (!vehicleId) {
+      return;
+    }
+
+    const date = todayAccra();
+
+    try {
+      const [fleetRes, tripsRes] = await Promise.all([
+        fetch("/api/vehicles", { cache: "no-store" }),
+        fetch(
+          `/api/trips?vehicleId=${encodeURIComponent(vehicleId)}&date=${encodeURIComponent(date)}`,
+          { cache: "no-store" },
+        ),
+      ]);
+
+      const fleet = (await fleetRes.json()) as { vehicle?: { id: string; plate: string } }[];
+      if (fleetRes.ok && Array.isArray(fleet)) {
+        const row = fleet.find((item) => item.vehicle?.id === vehicleId);
+        if (row?.vehicle?.plate) {
+          setPlate(row.vehicle.plate);
+        }
+      }
+
+      const trips = (await tripsRes.json()) as { amount?: number }[];
+      if (tripsRes.ok && Array.isArray(trips)) {
+        const total = trips.reduce((sum, trip) => sum + (Number(trip.amount) || 0), 0);
+        setLoggedPreview(Number(total.toFixed(2)));
+      }
+    } catch {
+      /* non-blocking */
+    }
+  }, [vehicleId]);
+
+  useEffect(() => {
+    void loadContext();
+  }, [loadContext]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -66,6 +115,7 @@ export default function DisputePage() {
       }
 
       setResult(data);
+      void loadContext();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not review dispute");
     } finally {
@@ -82,6 +132,16 @@ export default function DisputePage() {
       <div className="mt-4">
         <p className="text-sm font-semibold uppercase tracking-[0.18em] text-gray-500">Dispute</p>
         <h1 className="mt-2 text-3xl font-bold text-ink">AI revenue review</h1>
+        {plate ? (
+          <p className="mt-2 text-sm font-medium text-gray-800">
+            Vehicle <span className="font-semibold">{plate}</span> · {todayAccra()}
+          </p>
+        ) : null}
+        {loggedPreview !== null ? (
+          <p className="mt-2 text-sm font-semibold text-gray-900">
+            Logged today: GHS {loggedPreview.toFixed(2)}
+          </p>
+        ) : null}
         <p className="mt-2 text-sm leading-6 text-gray-600">
           Describe what the owner believes is missing or mismatched.
         </p>

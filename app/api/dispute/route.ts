@@ -1,8 +1,12 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import type { DisputeResponse, Trip } from "@/lib/contracts";
+import { DISPUTE_PROMPT } from "@/lib/prompts";
 import { getTripsForVehicleDate } from "@/lib/sampleData";
-import { isDbConfigured, sql } from "@/lib/db";
+import { isDbConfigured } from "@/lib/db";
+import { completeClaude, parseJsonFromAssistant } from "@/lib/claude";
+import { ghanaNlpTranslateEnToTw } from "@/lib/ghanaNlp";
+import { fetchTripsForVehicleOnDate } from "@/lib/tripDb";
 
 const requestSchema = z.object({
   vehicleId: z.string().min(1),
@@ -11,66 +15,128 @@ const requestSchema = z.object({
   claimedAmount: z.number().optional(),
 });
 
-function extractClaimedAmount(text: string) {
+function extractClaimedAmountRegex(text: string) {
   const match = text.match(/(\d+(?:\.\d+)?)/);
   return match ? Number(match[1]) : 0;
 }
 
-function buildVerdict(loggedTotal: number, claimedTotal: number): DisputeResponse["verdict"] {
+async function extractClaimedWithClaude(ownerClaim: string): Promise<number | null> {
+  if (!process.env.ANTHROPIC_API_KEY?.trim()) {
+    return null;
+  }
+
+  const user = `Extract the claimed amount in Ghana cedis (GHS) as a number from the owner's text. Return JSON only: {"amount": number} or {"amount": null} if unclear.\n\nText: ${ownerClaim}`;
+
+  try {
+    const assistant = await completeClaude({ user, maxTokens: 256 });
+    const parsed = parseJsonFromAssistant<{ amount?: number | null }>(assistant);
+    if (parsed?.amount === null || parsed?.amount === undefined) {
+      return null;
+    }
+    if (typeof parsed.amount !== "number" || Number.isNaN(parsed.amount)) {
+      return null;
+    }
+    return parsed.amount;
+  } catch (error) {
+    console.error("Claude claim extract failed", error);
+    return null;
+  }
+}
+
+async function runDisputeClaude(params: {
+  vehicleId: string;
+  date: string;
+  loggedTotal: number;
+  claimedTotal: number;
+  ownerClaim: string;
+  trips: Trip[];
+}): Promise<Pick<DisputeResponse, "analysisEn" | "analysisTwi" | "verdict"> | null> {
+  if (!process.env.ANTHROPIC_API_KEY?.trim()) {
+    return null;
+  }
+
+  const context = {
+    vehicleId: params.vehicleId,
+    date: params.date,
+    loggedTotal: params.loggedTotal,
+    claimedTotal: params.claimedTotal,
+    ownerClaim: params.ownerClaim,
+    trips: params.trips.map((t) => ({
+      id: t.id,
+      amount: t.amount,
+      route: t.route,
+      loggedAt: t.loggedAt,
+      confidence: t.confidence,
+    })),
+  };
+
+  const user = `${DISPUTE_PROMPT.trim()}\n\nContext (JSON):\n${JSON.stringify(context)}`;
+
+  try {
+    const assistant = await completeClaude({ user, maxTokens: 1024 });
+    const parsed = parseJsonFromAssistant<{
+      analysisEn?: string;
+      analysisTwi?: string;
+      verdict?: string;
+    }>(assistant);
+
+    if (
+      !parsed?.analysisEn ||
+      !parsed?.verdict ||
+      !["matches", "gap_explained", "gap_unexplained"].includes(parsed.verdict)
+    ) {
+      return null;
+    }
+
+    let analysisTwi = parsed.analysisTwi?.trim();
+    if (!analysisTwi) {
+      analysisTwi =
+        (await ghanaNlpTranslateEnToTw(parsed.analysisEn)) ?? parsed.analysisEn;
+    }
+
+    return {
+      analysisEn: parsed.analysisEn,
+      analysisTwi,
+      verdict: parsed.verdict as DisputeResponse["verdict"],
+    };
+  } catch (error) {
+    console.error("Claude dispute failed", error);
+    return null;
+  }
+}
+
+function heuristicDispute(
+  loggedTotal: number,
+  claimedTotal: number,
+  tripCount: number,
+): Pick<DisputeResponse, "analysisEn" | "analysisTwi" | "verdict"> {
   const difference = Math.abs(claimedTotal - loggedTotal);
 
   if (difference === 0) {
-    return "matches";
-  }
-
-  if (difference <= 15) {
-    return "gap_explained";
-  }
-
-  return "gap_unexplained";
-}
-
-function buildAnalysis(loggedTotal: number, claimedTotal: number, tripCount: number) {
-  const difference = claimedTotal - loggedTotal;
-
-  if (difference === 0) {
     return {
-      en: `The claimed amount matches the logged records exactly. The system found ${tripCount} trips and no revenue gap for the selected day.`,
-      twi: `Sika a wɔaka no ne sika a wɔakyerɛw no hyia pɛpɛɛpɛ. System no huu trip ${tripCount} na wanhu sika biara a ayera wɔ da no mu.`,
+      verdict: "matches",
+      analysisEn: `The claimed amount matches the logged records. The system shows ${tripCount} trips for the selected day.`,
+      analysisTwi: `Sika a wɔaka no ne sika a wɔakyerɛw no hyia. System no huu trip ${tripCount} wɔ da no mu.`,
     };
   }
 
-  if (Math.abs(difference) <= 15) {
+  if (difference <= 15) {
     return {
-      en: `There is a small difference between the claim and the logged total. The gap may be from one missed or rounded trip, so this needs a quick manual check.`,
-      twi: `Nsonsonoe ketewa bi wɔ sika a wɔaka ne sika a wɔakyerɛw no ntam. Ebia trip baako na wɔankyerɛw anaa wɔbɔɔ no akontaa pɛsɛmenkominya, enti ɛsɛ sɛ wɔhwɛ mu ntɛm.`,
+      verdict: "gap_explained",
+      analysisEn:
+        "There is a small difference between the claim and the logged total. It may be rounding or one unrecorded short trip.",
+      analysisTwi:
+        "Nsonsonoe ketewa bi wɔ sika a wɔaka ne sika a wɔakyerɛw no ntam. Ebia ɛyɛ akontaa anaa trip ketewa bi a wɔankyerɛw.",
     };
   }
 
   return {
-    en: `The claim is meaningfully higher than the logged total. The current records do not fully explain the difference, so this should be treated as an unresolved gap.`,
-    twi: `Sika a wɔaka no sɔre sen sika a wɔakyerɛw no kɛse. Record a ɛwɔ hɔ mpɛ mu nkyerɛkyerɛmu mma nsonsonoe no, enti ɛsɛ sɛ wɔfa no sɛ asɛm a ennyaa nkyerɛmu da.`,
-    };
-  }
-}
-
-async function readTripsFromDb(vehicleId: string, date: string): Promise<Trip[]> {
-  const rows = await sql`
-    SELECT id, vehicle_id, amount, route, logged_at, raw_voice_text, confidence
-    FROM trips
-    WHERE vehicle_id = ${vehicleId} AND DATE(logged_at) = ${date}
-    ORDER BY logged_at DESC;
-  `;
-
-  return rows.map((row) => ({
-    id: String(row.id),
-    vehicleId: String(row.vehicle_id),
-    amount: Number(row.amount),
-    route: String(row.route),
-    loggedAt: new Date(row.logged_at).toISOString(),
-    rawVoiceText: row.raw_voice_text ? String(row.raw_voice_text) : undefined,
-    confidence: row.confidence as Trip["confidence"],
-  }));
+    verdict: "gap_unexplained",
+    analysisEn:
+      "The claim is significantly different from the logged total. The records do not fully explain the gap.",
+    analysisTwi:
+      "Sika a wɔaka no yɛ fã sen sika a wɔakyerɛw no. Nkra a ɛwɔ hɔ nyinaa nkyerɛ nsonsonoe no.",
+  };
 }
 
 export async function POST(request: Request) {
@@ -85,20 +151,34 @@ export async function POST(request: Request) {
     const { vehicleId, date, ownerClaim, claimedAmount } = parsed.data;
 
     const trips = isDbConfigured()
-      ? await readTripsFromDb(vehicleId, date)
+      ? await fetchTripsForVehicleOnDate(vehicleId, date)
       : getTripsForVehicleDate(vehicleId, date);
 
     const loggedTotal = Number(trips.reduce((sum, trip) => sum + trip.amount, 0).toFixed(2));
-    const resolvedClaimed = claimedAmount ?? extractClaimedAmount(ownerClaim);
-    const verdict = buildVerdict(loggedTotal, resolvedClaimed);
-    const analysis = buildAnalysis(loggedTotal, resolvedClaimed, trips.length);
 
-    const payload: DisputeResponse = {
-      analysisEn: analysis.en,
-      analysisTwi: analysis.twi,
+    let resolvedClaimed = claimedAmount;
+    if (resolvedClaimed === undefined) {
+      const fromClaude = await extractClaimedWithClaude(ownerClaim);
+      resolvedClaimed = fromClaude ?? extractClaimedAmountRegex(ownerClaim);
+    }
+
+    const ai = await runDisputeClaude({
+      vehicleId,
+      date,
       loggedTotal,
       claimedTotal: resolvedClaimed,
-      verdict,
+      ownerClaim,
+      trips,
+    });
+
+    const resolved = ai ?? heuristicDispute(loggedTotal, resolvedClaimed, trips.length);
+
+    const payload: DisputeResponse = {
+      analysisEn: resolved.analysisEn,
+      analysisTwi: resolved.analysisTwi,
+      loggedTotal,
+      claimedTotal: resolvedClaimed,
+      verdict: resolved.verdict,
     };
 
     return NextResponse.json(payload);
