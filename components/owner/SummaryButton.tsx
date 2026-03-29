@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import type { SummaryResponse } from "@/lib/contracts";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
+import TtsButton from "@/components/TtsButton";
 
 type Props = {
   vehicleId: string;
@@ -29,21 +30,19 @@ export default function SummaryButton({ vehicleId, date, variant = "default", di
     try {
       const response = await fetch("/api/summary", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ vehicleId, date }),
       });
 
       const data = (await response.json()) as SummaryResponse & { error?: string };
 
       if (!response.ok) {
-        throw new Error(data.error || "Could not fetch AI summary");
+        throw new Error(data.error || "AI summary unavailable right now.");
       }
 
       setResult(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
+      setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -58,13 +57,18 @@ export default function SummaryButton({ vehicleId, date, variant = "default", di
       ) : null}
 
       {result ? (
-        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Twi</p>
-          <p className="mt-1 text-sm leading-relaxed text-slate-800">{result.aiNoteTwi}</p>
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 space-y-4">
+          <div>
+            <div className="flex items-center justify-between gap-3 mb-2">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Twi</p>
+              <TtsButton text={result.aiNoteTwi} />
+            </div>
+            <p className="text-sm leading-relaxed text-slate-800">{result.aiNoteTwi}</p>
+          </div>
 
-          <div className="mt-4 border-t border-slate-200 pt-4">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">English</p>
-            <p className="mt-1 text-sm leading-relaxed text-slate-800">{result.aiNoteEn}</p>
+          <div className="border-t border-slate-200 pt-4">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-2">English</p>
+            <p className="text-sm leading-relaxed text-slate-800">{result.aiNoteEn}</p>
           </div>
         </div>
       ) : null}

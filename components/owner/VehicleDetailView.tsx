@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { DailySummary, Trip, Vehicle } from "@/lib/contracts";
 import EarningsBar from "@/components/owner/EarningsBar";
 import SummaryButton from "@/components/owner/SummaryButton";
@@ -28,16 +28,34 @@ export default function VehicleDetailView({ vehicleId }: Props) {
   const [error, setError] = useState("");
   const [tripDate, setTripDate] = useState(todayAccra);
 
-  const load = useCallback(async () => {
+  // Weekly summaries don't change every 5s — fetch once then stop
+  const weeklyFetchedRef = useRef(false);
+
+  const loadWeekly = useCallback(async () => {
+    if (weeklyFetchedRef.current) return;
+    weeklyFetchedRef.current = true;
+    try {
+      const weekRes = await fetch(
+        `/api/weekly-summaries?vehicleId=${encodeURIComponent(vehicleId)}`,
+        { cache: "no-store" },
+      );
+      const weekJson = (await weekRes.json()) as DailySummary[] | { error?: string };
+      if (weekRes.ok && Array.isArray(weekJson)) {
+        setWeekly(weekJson);
+      }
+    } catch {
+      weeklyFetchedRef.current = false; // allow retry
+    }
+  }, [vehicleId]);
+
+  // Poll only live data: vehicles (today's totals) + trips
+  const pollLive = useCallback(async () => {
     const date = todayAccra();
     setTripDate(date);
 
     try {
-      const [fleetRes, weekRes, tripsRes] = await Promise.all([
+      const [fleetRes, tripsRes] = await Promise.all([
         fetch("/api/vehicles", { cache: "no-store" }),
-        fetch(`/api/weekly-summaries?vehicleId=${encodeURIComponent(vehicleId)}`, {
-          cache: "no-store",
-        }),
         fetch(
           `/api/trips?vehicleId=${encodeURIComponent(vehicleId)}&date=${encodeURIComponent(date)}`,
           { cache: "no-store" },
@@ -49,7 +67,7 @@ export default function VehicleDetailView({ vehicleId }: Props) {
         throw new Error(
           typeof fleetJson === "object" && fleetJson && "error" in fleetJson
             ? String((fleetJson as { error?: string }).error)
-            : "Could not load vehicle",
+            : "Couldn't load fleet details.",
         );
       }
 
@@ -57,36 +75,44 @@ export default function VehicleDetailView({ vehicleId }: Props) {
       if (!row) {
         setVehicle(null);
         setTodaySummary(null);
-        setError("Vehicle not found.");
+        setError("This vehicle isn't available.");
         return;
       }
 
       setVehicle(row.vehicle);
       setTodaySummary(row.summary);
 
-      const weekJson = (await weekRes.json()) as DailySummary[] | { error?: string };
-      if (!weekRes.ok || !Array.isArray(weekJson)) {
-        throw new Error("Could not load weekly trend");
-      }
-      setWeekly(weekJson);
-
       const tripsJson = (await tripsRes.json()) as Trip[] | { error?: string };
-      if (!tripsRes.ok || !Array.isArray(tripsJson)) {
-        throw new Error("Could not load trips");
+      if (tripsRes.ok && Array.isArray(tripsJson)) {
+        setTrips(tripsJson);
       }
-      setTrips(tripsJson);
 
       setError("");
+
+      // Load weekly chart once after we have a confirmed vehicleId
+      void loadWeekly();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not load data");
+      setError(err instanceof Error ? err.message : "Couldn't load details. Check your connection.");
     }
-  }, [vehicleId]);
+  }, [vehicleId, loadWeekly]);
 
   useEffect(() => {
-    void load();
-    const interval = setInterval(() => void load(), 5000);
-    return () => clearInterval(interval);
-  }, [load]);
+    void pollLive();
+
+    const interval = setInterval(() => {
+      if (!document.hidden) void pollLive();
+    }, 5000);
+
+    const handleVisibility = () => {
+      if (!document.hidden) void pollLive();
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [pollLive]);
 
   const BackButton = () => (
     <Link

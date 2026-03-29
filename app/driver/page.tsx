@@ -108,7 +108,7 @@ export default function DriverPage() {
 
       if (!res.ok || !data.success) {
         setStep(0, { status: "error", detail: data.error });
-        throw new Error(data.error ?? "Could not log trip");
+        throw new Error(data.error ?? "Trip couldn't be saved.");
       }
 
       setStep(0, { status: "done", detail: `GHS ${data.trip?.amount.toFixed(2)} · ${data.trip?.route}` });
@@ -128,7 +128,7 @@ export default function DriverPage() {
 
       setModal("success");
     } catch (err) {
-      setModalError(err instanceof Error ? err.message : "Could not save trip");
+      setModalError(err instanceof Error ? err.message : "Trip couldn't be saved. Please try again.");
       setModal("error");
     }
   }
@@ -451,7 +451,7 @@ export default function DriverPage() {
                     <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />
                   </svg>
                 </div>
-                <p className="text-[17px] font-bold text-red-700 mb-1">Could not save</p>
+                <p className="text-[17px] font-bold text-red-700 mb-1">Trip not saved</p>
                 <p className="text-sm text-slate-500 mb-5">{modalError}</p>
                 <div className="flex gap-3">
                   <button type="button" onClick={() => setModal("closed")}

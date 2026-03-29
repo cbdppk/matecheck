@@ -74,8 +74,8 @@ export default function SpeakFieldButton({ field, value, onValueChange, onError 
           ? (parsed.route ?? raw)
           : parsed.amount != null ? String(parsed.amount) : "",
       );
-    } catch (e) {
-      onError(e instanceof Error ? e.message : "Recognition failed");
+    } catch {
+      onError("Couldn't understand that. Please try again.");
     } finally {
       setUiState("idle");
       setPreview("");
